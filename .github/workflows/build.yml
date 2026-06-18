@@ -46,9 +46,7 @@ jobs:
           tar -xzvf Kernel.tar.gz
           rm Kernel.tar.gz 
           
-          echo "Extracting Kernel.tar to working directories..."
-          tar -xvf Kernel.tar
-          rm Kernel.tar 
+          echo "Verifying local directory structure:"
           ls -la
 
       # 5. Configure JDK 21
