@@ -1,0 +1,92 @@
+name: Build Samsung Kernel (Google Drive Fetch + AOSP Toolchain + KSU)
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build:
+    name: Purge, Fetch from Drive, Sync, Patch, and Build
+    runs-on: ubuntu-22.04
+
+    steps:
+      # 1. Manual Clean up to maximize storage space
+      - name: Free Disk Space Manually
+        run: |
+          sudo apt-get purge -y azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* mysql* dotnet-sdk-* openjdk-*
+          sudo apt-get autoremove -y
+          sudo apt-get clean
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/share/swift /usr/local/share/powershell /opt/hostedtoolcache/Java
+          docker image prune --all --force
+
+      # 2. Install Build Dependencies, Python PIP, and Google Repo tool
+      - name: Install Build Dependencies & Repo Tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3 python3-pip python-is-python3
+          
+          # Install gdown to pull files securely from Google Drive
+          pip3 install gdown
+          
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          echo "~/bin" >> $GITHUB_PATH
+
+      # 3. Securely pull Kernel.tar.gz from Google Drive
+      - name: Fetch Kernel from Google Drive
+        run: |
+          echo "Downloading Kernel.tar.gz from Google Drive..."
+          # REPLACE the URL below with your actual Google Drive Share Link or File ID
+          gdown "https://drive.google.com/file/d/1mYxE44LH-xz8fg0GuEYxcJ-f7OS6mGke/view?usp=sharing" -O Kernel.tar.gz
+
+      # 4. Handle double extraction & drop intermediate archives instantly
+      - name: Extract Samsung Kernel Archive
+        run: |
+          echo "Extracting Kernel.tar.gz to Kernel.tar..."
+          tar -xzvf Kernel.tar.gz
+          rm Kernel.tar.gz 
+          
+          echo "Extracting Kernel.tar to working directories..."
+          tar -xvf Kernel.tar
+          rm Kernel.tar 
+          ls -la
+
+      # 5. Configure JDK 21
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 6. Sync the Android 15 / 6.6 AOSP Toolchain
+      - name: Sync AOSP Toolchain (Android 15 / 6.6)
+        run: |
+          mkdir aosp-toolchain
+          cd aosp-toolchain
+          repo init -u https://android.googlesource.com/kernel/manifest -b common-android15-6.6 --depth=1
+          repo sync -c --no-clone-bundle --no-tags -j$(nproc)
+          mv build external prebuilts tools ..
+          cd ..
+          rm -rf aosp-toolchain
+
+      # 7. Automatically patch the kernel tree for KernelSU
+      - name: Inject KernelSU
+        run: |
+          cd kernel-6.6
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+
+      # 8. Fire off the original wrapper script provided by Samsung
+      - name: Execute Samsung Kernel Build
+        run: |
+          chmod +x build_kernel.sh
+          ./build_kernel.sh
+
+      # 9. Target and compress the specific output binaries and modules (.ko)
+      - name: Upload Rooted Kernel Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rooted-samsung-kernel-output
+          path: |
+            out/target/product/a06/obj/KLEAF_OBJ/dist/kernel_device_modules-6.6/mgk_64_k66_kernel_aarch64.user/Image.gz
+            out/target/product/a06/obj/KLEAF_OBJ/dist/*/*.ko
+          if-no-files-found: error
