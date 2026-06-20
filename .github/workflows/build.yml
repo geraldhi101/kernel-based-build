@@ -1,4 +1,4 @@
-name: Build Samsung Kernel (Google Drive Fetch + AOSP Toolchain + KSU)
+name: Build Samsung A06 Kernel with Kernel SU (Google Drive Fetch + Samsung Open Source Toolchain)
 
 on:
   workflow_dispatch: 
@@ -15,14 +15,12 @@ jobs:
           echo "=== Disk Space BEFORE Cleanup ==="
           df -h
           
-          echo "Purging core heavy package engines quietly..."
-          # Removed wildcards to prevent log spamming, added -qq for quiet mode
-          sudo apt-get purge -y -qq azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql mysql-server
-          sudo apt-get autoremove -y -qq
-          sudo apt-get clean -qq
+          echo "Purging core heavy package engines quietly (Silencing all warnings)..."
+          sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql mysql-server > /dev/null 2>&1
+          sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq > /dev/null 2>&1
+          sudo apt-get clean -qq > /dev/null 2>&1
           
           echo "Deleting massive pre-installed software directories (Silent & Fast)..."
-          # rm -rf is completely silent and ignores files/folders that don't exist
           sudo rm -rf /usr/local/lib/android     # Android SDK (~12GB)
           sudo rm -rf /usr/share/dotnet          # .NET Core SDK (~4-5GB)
           sudo rm -rf /opt/ghc                   # Haskell compiler (~2GB)
@@ -33,15 +31,15 @@ jobs:
           sudo rm -rf /usr/local/share/powershell # PowerShell modules
           
           echo "Cleaning up residual configuration directories..."
-          sudo rm -rf /etc/mysql /opt/az /etc/apt/sources.list.d/*
+          sudo rm -rf /etc/mysql /opt/az /etc/apt/sources.list.d/* > /dev/null 2>&1
           
           echo "Purging background docker cache layers..."
-          docker image prune --all --force > /dev/null
+          docker image prune --all --force > /dev/null 2>&1
           
           echo "=== Disk Space AFTER Cleanup ==="
           df -h
 
-      # 2. Install Build Dependencies, Python PIP, and Google Repo tool
+      # 2. Install Build Dependencies and Python PIP fo Gdown
       - name: Install Build Dependencies & Repo Tool
         run: |
           sudo apt-get update
@@ -54,7 +52,6 @@ jobs:
       - name: Fetch Kernel from Google Drive
         run: |
           echo "Downloading Kernel.tar.gz from Google Drive..."
-          # REPLACE the URL below with your actual Google Drive Share Link or File ID
           gdown "https://drive.google.com/file/d/1mYxE44LH-xz8fg0GuEYxcJ-f7OS6mGke/view?usp=sharing" -O Kernel.tar.gz
 
           echo "Downloading Toolchain.tar.gz from Google Drive..."
@@ -65,7 +62,14 @@ jobs:
         run: |
           echo "Extracting Kernel.tar.gz directly to working directories..."
           tar -xzvf Kernel.tar.gz
-          rm Kernel.tar.gz 
+          rm Kernel.tar.gz
+          
+          # Safety net for nested Kernel.tar
+          if [ -f Kernel.tar ]; then
+            echo "Unpacking nested Kernel.tar..."
+            tar -xvf Kernel.tar
+            rm Kernel.tar
+          fi
 
           echo "Extracting Toolchain.tar.gz..."
           mkdir temp_toolchain
@@ -122,12 +126,28 @@ jobs:
           chmod +x build_kernel.sh
           ./build_kernel.sh
 
-      # 9. Target and compress the specific output binaries and modules (.ko)
+      # 9. Gather all outputs into a flat directory
+      - name: Prepare Flat Artifacts
+        run: |
+          echo "Creating a flat output directory..."
+          mkdir -p output_flat
+          
+          echo "Hunting down the Image.gz file..."
+          # This searches everywhere inside 'out/' and copies Image.gz to our flat folder
+          find out/ -name "Image.gz" -type f -exec cp {} output_flat/ \;
+          
+          echo "Hunting down all .ko kernel modules..."
+          # This grabs every .ko file, regardless of where Samsung hid it
+          find out/ -name "*.ko" -type f -exec cp {} output_flat/ \;
+          
+          echo "Here is what we gathered:"
+          ls -la output_flat/
+
+      # 10. Upload the flat directory contents
       - name: Upload Rooted Kernel Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: rooted-samsung-kernel-output
-          path: |
-            out/target/product/a06/obj/KLEAF_OBJ/dist/kernel_device_modules-6.6/mgk_64_k66_kernel_aarch64.user/Image.gz
-            out/target/product/a06/obj/KLEAF_OBJ/dist/*/*.ko
+          name: Samsung-A06-KernelSU
+          # The asterisk tells it to upload the contents, NOT the folder itself
+          path: output_flat/*
           if-no-files-found: error
