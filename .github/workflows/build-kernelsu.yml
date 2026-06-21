@@ -5,8 +5,10 @@ on:
 
 jobs:
   build:
-    name: Purge, Fetch from Drive, Sync, Patch, and Build
+    name: Purge, Fetch from Drive, Patch, and Build
     runs-on: ubuntu-22.04
+    permissions: 
+      contents: write
 
     steps:
       # 1. Clean up the runner to maximize free space quietly (~35GB+ reclaimed)
@@ -49,7 +51,7 @@ jobs:
           pip3 install gdown
         
       # 3. Securely pull Kernel.tar.gz from Google Drive
-      - name: Fetch Kernel from Google Drive
+      - name: Fetch Kernel and Toolchain from Google Drive
         run: |
           echo "Downloading Kernel.tar.gz from Google Drive..."
           gdown "https://drive.google.com/file/d/1mYxE44LH-xz8fg0GuEYxcJ-f7OS6mGke/view?usp=sharing" -O Kernel.tar.gz
