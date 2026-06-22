@@ -50,7 +50,7 @@ jobs:
           # Install gdown to pull files securely from Google Drive
           pip3 install gdown
         
-      # 3. Securely pull Kernel.tar.gz from Google Drive
+      # 3. Securely pull Kernel.tar.gz and Toolchain.tar.gz from Google Drive
       - name: Fetch Kernel and Toolchain from Google Drive
         run: |
           echo "Downloading Kernel.tar.gz from Google Drive..."
