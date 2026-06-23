@@ -51,16 +51,16 @@ jobs:
           pip3 install gdown
         
       # 3. Securely pull Kernel.tar.gz and Toolchain.tar.gz from Google Drive
-      - name: Fetch Kernel and Toolchain from Google Drive
+      - name: Fetch Kernel and toolchain from Google Drive
         run: |
           echo "Downloading Kernel.tar.gz from Google Drive..."
           gdown "https://drive.google.com/file/d/1mYxE44LH-xz8fg0GuEYxcJ-f7OS6mGke/view?usp=sharing"
 
-          echo "Downloading Toolchain.tar.gz from Google Drive..."
+          echo "Downloading toolchain.tar.gz from Google Drive..."
           gdown "https://drive.google.com/file/d/1OxwZZNzDaY-VoSqJSFjPuKfKKQuzNcUP/view?usp=sharing"
 
       # 4. Handle double extraction & drop intermediate archives instantly
-      - name: Extract Samsung Kernel Archive
+      - name: Extract Samsung Kernel and toolchain archives
         run: |
           echo "Extracting Kernel.tar.gz directly to working directories..."
           tar -xzvf Kernel.tar.gz
