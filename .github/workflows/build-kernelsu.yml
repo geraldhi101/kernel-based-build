@@ -168,19 +168,15 @@ jobs:
           if [ "$MODULE_COUNT" -eq 0 ]; then
             echo "There are no .ko files found! Skipping tar creation."
           else
-            echo "Found $MODULE_COUNT .ko files! Bundling into archive..."
-            tar -czvf output_release/modules.tar.gz -C output_release/modules .
+            echo "Creating the Debug archive with symbols"
+            tar -czvf output_release/modules-debug-symbols.tar.gz -C output_release/modules .
+            echo "Creating the Debug archive without symbols"
+            aarch64-linux-android-strip --strip-debug output_release/modules/*.ko || strip --strip-debug output_release/modules/*.ko || true
+            echo "Creating the tiny, optimized Archive for normal users..."
+            tar -czvf output_release/modules-optimized.tar.gz -C output_release/modules .
           fi
           
           echo "Image.gz and *.ko files are ready for upload!"
-
-      # 9. Upload to GitHub Actions Artifacts
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Samsung-A06-KernelSU
-          path: output_release/
-          if-no-files-found: error
 
       # 10. Upload directly to GitHub Releases
       - name: Publish to GitHub Releases
@@ -192,12 +188,14 @@ jobs:
           body: |
             Automated KernelSU build for the Samsung A06.            
             **Included Files:**
-            * `Image.gz`: Image file to be packed with boot.img by using magiskboot )
-            * `modules.tar.gz`: Compiled debugging modules 
+            * `Image.gz`: Image file to be packed with boot.img by using magiskboot
+            * `modules-with-debug-symbols.tar.gz`: Compiled debugging modules with symbols
+            * `modules-without-debug-symbols.tar.gz`: Compiled debugging modules without symbols
           draft: false
           prerelease: false
           files: |
             output_release/Image.gz
-            output_release/modules.tar.gz
+            output_release/modules-with-debug-symbols.tar.gz
+            output_release/modules-without-debug-symbols.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
