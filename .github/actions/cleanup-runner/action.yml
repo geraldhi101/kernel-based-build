@@ -1,0 +1,35 @@
+name: 'Runner Disk Space Cleaner'
+description: 'Purges heavy pre-installed packages and runtimes to maximize space for large Android kernel compiles.'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Free Disk Space Manually
+      shell: bash  # CRITICAL: Every step in a composite action requires an explicit shell!
+      run: |
+        echo "=== Disk Space BEFORE Cleanup ==="
+        df -h
+        
+        echo "Purging core heavy package engines quietly (Silencing all warnings)..."
+        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql mysql-server > /dev/null 2>&1
+        sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq > /dev/null 2>&1
+        sudo apt-get clean -qq > /dev/null 2>&1
+        
+        echo "Deleting massive pre-installed software directories (Silent & Fast)..."
+        sudo rm -rf /usr/local/lib/android     # Android SDK (~12GB)
+        sudo rm -rf /usr/share/dotnet          # .NET Core SDK (~4-5GB)
+        sudo rm -rf /opt/ghc                   # Haskell compiler (~2GB)
+        sudo rm -rf /usr/share/swift           # Swift runtime (~1GB)
+        sudo rm -rf /usr/local/share/boost     # Boost C++ Libraries (~4GB)
+        sudo rm -rf /opt/hostedtoolcache/CodeQL # CodeQL analysis tools (~5GB)
+        sudo rm -rf /opt/hostedtoolcache/Java   # Extraneous Java versions
+        sudo rm -rf /usr/local/share/powershell # PowerShell modules
+        
+        echo "Cleaning up residual configuration directories..."
+        sudo rm -rf /etc/mysql /opt/az /etc/apt/sources.list.d/* > /dev/null 2>&1
+        
+        echo "Purging background docker cache layers..."
+        docker image prune --all --force > /dev/null 2>&1
+        
+        echo "=== Disk Space AFTER Cleanup ==="
+        df -h
