@@ -24,37 +24,15 @@ jobs:
       contents: write
 
     steps:
-      # 1. Clean up the runner to maximize free space quietly (~20GB+ reclaimed)
-      - name: Free Disk Space Manually
-        run: |
-          echo "=== Disk Space BEFORE Cleanup ==="
-          df -h
-          
-          echo "Purging core heavy package engines quietly (Silencing all warnings)..."
-          sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql mysql-server > /dev/null 2>&1
-          sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq > /dev/null 2>&1
-          sudo apt-get clean -qq > /dev/null 2>&1
-          
-          echo "Deleting massive pre-installed software directories (Silent & Fast)..."
-          sudo rm -rf /usr/local/lib/android     # Android SDK (~12GB)
-          sudo rm -rf /usr/share/dotnet          # .NET Core SDK (~4-5GB)
-          sudo rm -rf /opt/ghc                   # Haskell compiler (~2GB)
-          sudo rm -rf /usr/share/swift           # Swift runtime (~1GB)
-          sudo rm -rf /usr/local/share/boost     # Boost C++ Libraries (~4GB)
-          sudo rm -rf /opt/hostedtoolcache/CodeQL # CodeQL analysis tools (~5GB)
-          sudo rm -rf /opt/hostedtoolcache/Java   # Extraneous Java versions
-          sudo rm -rf /usr/local/share/powershell # PowerShell modules
-          
-          echo "Cleaning up residual configuration directories..."
-          sudo rm -rf /etc/mysql /opt/az /etc/apt/sources.list.d/* > /dev/null 2>&1
-          
-          echo "Purging background docker cache layers..."
-          docker image prune --all --force > /dev/null 2>&1
-          
-          echo "=== Disk Space AFTER Cleanup ==="
-          df -h
-
-      # 2. Install Build Dependencies and Python PIP fo Gdown
+      # 1. Checkout the repository first so GitHub can read your custom actions folder
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      # 2. Clean up the runner to maximize free space quietly (~20GB+ reclaimed)
+      - name: Free Runner Disk Space
+        uses: ./.github/actions/cleanup-runner
+        
+      # 3. Install Build Dependencies and Python PIP fo Gdown
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
@@ -63,16 +41,11 @@ jobs:
           # Install gdown to pull files securely from Google Drive
           pip3 install gdown
         
-      # 3. Securely pull Kernel.tar.gz and toolchain.tar.gz from Google Drive
-      - name: Fetch Kernel and toolchain from Google Drive
-        run: |
-          echo "Downloading Kernel.tar.gz from Google Drive..."
-          gdown "https://drive.google.com/file/d/1mYxE44LH-xz8fg0GuEYxcJ-f7OS6mGke/view?usp=sharing"
+      # 4. Securely pull Kernel.tar.gz and toolchain.tar.gz from Google Drive
+      - name: Fetch Samsung A06 (SM-A065F) Kernel Source and Toolchain
+        uses: ./.github/actions/fetch-sm-a065f-sources
 
-          echo "Downloading toolchain.tar.gz from Google Drive..."
-          gdown "https://drive.google.com/file/d/1OxwZZNzDaY-VoSqJSFjPuKfKKQuzNcUP/view?usp=sharing"
-
-      # 4. Handle double extraction & drop intermediate archives instantly
+      # 5. Handle double extraction & drop intermediate archives instantly
       - name: Extract Samsung Kernel and toolchain archives
         run: |
           echo "Extracting Kernel.tar.gz directly to working directories..."
@@ -103,14 +76,14 @@ jobs:
           echo "Verifying local directory structure:"
           ls -la
 
-      # 5. Configure JDK 21
+      # 6. Configure JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      # 6. Merge Samsung Toolchain seamlessly into Workspace
+      # 7. Merge Samsung Toolchain seamlessly into Workspace
       - name: Merge Samsung Toolchain
         run: |
           echo "Unlocking write permissions on existing directories and toolchain..."
@@ -133,7 +106,7 @@ jobs:
           # Silently remove the staging folder to prevent log spam
           rm -rf temp_toolchain > /dev/null 2>&1
           
-      # 7. Automatically patch the kernel tree for root implementation
+      # 8. Automatically patch the kernel tree for root implementation
       - name: Inject Root Implementation
         run: |
           echo "Entering the kernel source directory..."
@@ -146,13 +119,13 @@ jobs:
           # The engine blindly executes whatever script the variant handed to it!
           ${{ inputs.patch_script }}
           
-      # 8. Fire off the original wrapper script provided by Samsung
+      # 9. Fire off the original wrapper script provided by Samsung
       - name: Execute Samsung Kernel Build
         run: |
           chmod +x build_kernel.sh
           ./build_kernel.sh
 
-      # 9. Gather the final kernel binary and .ko modules files
+      # 10. Gather the final kernel binary and .ko modules files
       - name: Prepare Artifacts for Release
         run: |
           echo "Creating output directory..."
@@ -182,7 +155,7 @@ jobs:
           
           echo "Image.gz and *.ko files are ready for upload!"
 
-      # 10. Upload directly to GitHub Releases
+      # 11. Upload directly to GitHub Releases
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
