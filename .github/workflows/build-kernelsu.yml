@@ -1,9 +1,9 @@
-name: Build Samsung A06 - KernelSU
+name: Build Samsung A06 (SM-A06F) - KernelSU
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 0 * * *'
 
 jobs:
   watchdog:
@@ -44,6 +44,7 @@ jobs:
           fi
           
   build_execution:
+    name: KernelSU Build 
     needs: watchdog
     if: ${{ needs.watchdog.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/core-compiler.yml
