@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Compare Release Tags
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Fetching latest official KernelSU-Next release..."
           OFFICIAL_TAG=$(curl -sL https://api.github.com/repos/rifsxd/KernelSU-Next/releases/latest | jq -r '.tag_name')
@@ -22,10 +24,7 @@ jobs:
           MY_EXPECTED_TAG="KernelSU-Next-$OFFICIAL_TAG"
           
           echo "Fetching the latest release from your repository via API..."
-          # Using curl to hit the API directly. We use the GITHUB_TOKEN to ensure we don't hit rate limits.
-          MY_LATEST_TAG=$(curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases" | \
-            jq -r '[.[] | select(.tag_name | startswith("KernelSU-Next-"))][0].tag_name')
+          MY_LATEST_TAG=$(gh release list -R ${{ github.repository }} --limit 100 --json tagName --jq '.[].tagName' | grep -E "^KernelSU-Next-v?[0-9]" | head -n 1)
           
           # If you have never made a release before, the API returns "null". Let's handle that safely.
           if [ "$MY_LATEST_TAG" == "null" ]; then
@@ -55,16 +54,13 @@ jobs:
         echo "Change directory to KernelSU-Next directory..."
         cd KernelSU-Next
               
-        # Safety net: Ensure we have the full git history so the commit count isn't "1"
         git fetch --unshallow > /dev/null 2>&1 || true
         
-        # Count the commits and do the math
         KSUN_TAG=$(git describe --abbrev=0 --tags)
         echo "ROOT_TAG=$KSUN_TAG" >> $GITHUB_ENV
         KSUN_MAJOR=$(echo "$KSUN_TAG" | sed -E 's/^v([0-9]+).*/\1/')
         KSUN_GIT_COUNT=$(git rev-list --count HEAD)
         
-        # Exact match of the Kbuild math: (Major * 10000) + Commit Count
         KSUN_DYNAMIC_VERSION=$(( (KSUN_MAJOR * 10000) + KSUN_GIT_COUNT ))
         echo "Calculated Version Code: $KSUN_DYNAMIC_VERSION"
         echo "Bypassing sandbox bug by patching dynamic version..."
