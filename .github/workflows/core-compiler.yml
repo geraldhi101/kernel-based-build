@@ -3,15 +3,15 @@ name: Shared Kernel Compiler Engine
 on:
   workflow_call:
     inputs:
-      variant_name:
+      variant-name:
         description: "Name of the root implementation"
         required: true
         type: string
-      setup_url:
+      setup-url:
         description: "URL to fetch setup.sh from every root implementation" 
         required: true
         type: string
-      patch_script:
+      patch-script:
         description: "Script to build the root implementation"
         required: true
         type: string
@@ -20,6 +20,8 @@ jobs:
   build:
     name: Purge, Fetch, Patch, and Build
     runs-on: ubuntu-22.04
+    env:
+      ROOT_TAG: ""
     permissions: 
       contents: write
 
@@ -34,10 +36,7 @@ jobs:
         
       # 3. Install Build Dependencies
       - name: Install Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git-core gnupg flex bison build-essential llvm zip curl zlib1g-dev libc6-dev-i386 libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3 python3-pip python-is-python3
-          pip3 install gdown
+        uses: ./.github/actions/install-dependencies
         
       # 4. Securely pull Kernel.tar.gz and toolchain.tar.gz
       - name: Fetch Samsung A06 (SM-A065F) Kernel Source and Toolchain
@@ -45,33 +44,7 @@ jobs:
 
       # 5. Handle double extraction & drop intermediate archives instantly
       - name: Extract Samsung Kernel and toolchain archives
-        run: |
-          echo "Extracting Kernel.tar.gz directly to working directories..."
-          tar -xzvf Kernel.tar.gz
-          rm -f Kernel.tar.gz
-          
-          # Safety net for nested Kernel.tar
-          if [ -f Kernel.tar ]; then
-            echo "Unpacking nested Kernel.tar..."
-            tar -xvf Kernel.tar
-            rm -f Kernel.tar
-          fi
-
-          echo "Extracting toolchain.tar.gz..."
-          mkdir temp_toolchain
-          tar -xzvf toolchain.tar.gz -C temp_toolchain
-          rm -f toolchain.tar.gz
-          
-          cd temp_toolchain
-          # Safety net for nested toolchain.tar 
-          if [ -f toolchain.tar ]; then
-            tar -xvf toolchain.tar
-            rm -f toolchain.tar
-          fi
-          cd ..
-          
-          echo "Verifying local directory structure:"
-          ls -la
+        uses: ./.github/actions/extract-sources
 
       # 6. Configure JDK 21
       - name: Set up JDK 21
@@ -82,26 +55,7 @@ jobs:
 
       # 7. Merge Samsung Toolchain
       - name: Merge Samsung Toolchain
-        run: |
-          echo "Unlocking write permissions on existing directories and toolchain..."
-          # Note: temp_toolchain requires +w permissions here to prevent "Permission denied" errors during the final rm -rf cleanup phase.
-          chmod -R +w kernel/ kernel-6.6/ vendor/ temp_toolchain/ || true
-          
-          echo "Merging toolchain components into the kernel tree..."
-          mkdir -p kernel/build kernel/external kernel/prebuilts
-          
-          # Sync directories while suppressing all output (> /dev/null 2>&1) to keep logs clean. Fails gracefully if empty.
-          rsync -a temp_toolchain/build/ kernel/build/ > /dev/null 2>&1 || true
-          rsync -a temp_toolchain/external/ kernel/external/ > /dev/null 2>&1 || true
-          rsync -a temp_toolchain/prebuilts/ kernel/prebuilts/ > /dev/null 2>&1 || true
-          
-          if [ -d "temp_toolchain/kernel" ]; then
-            rsync -a temp_toolchain/kernel/ kernel/ > /dev/null 2>&1 || true
-          fi
-          
-          echo "Cleaning up temporary files..."
-          # Silently remove the staging folder to prevent log spam
-          rm -rf temp_toolchain > /dev/null 2>&1
+        uses: ./.github/actions/merge-toolchain
           
       # 8. Automatically patch the kernel tree for root implementation
       - name: Inject Root Implementation
@@ -109,12 +63,11 @@ jobs:
           echo "Entering the kernel source directory..."
           cd kernel-6.6
           
-          echo "Injecting ${{ inputs.variant_name }} setup script..."
-          curl -LSs "${{ inputs.setup_url }}" | bash -
+          echo "Injecting ${{ inputs.variant-name }} setup script..."
+          curl -LSs "${{ inputs.setup-url }}" | bash -
           
           echo "Executing variant-specific patches..."
-          # The engine blindly executes whatever script the variant handed to it!
-          ${{ inputs.patch_script }}
+          ${{ inputs.patch-script }}
           
       # 9. Fire off the original wrapper script provided by Samsung
       - name: Execute Samsung Kernel Build
@@ -124,43 +77,18 @@ jobs:
 
       # 10. Gather the final kernel binary and .ko modules files
       - name: Prepare Files for Release
-        run: |
-          echo "Creating output directory..."
-          mkdir -p output_release/modules
-          
-          echo "Copying the exact Image.gz file..."
-          cp out/target/product/a06/obj/KLEAF_OBJ/dist/kernel_device_modules-6.6/mgk_64_k66_kernel_aarch64.user/Image.gz output_release/ || echo "Image.gz not found!"
-
-          echo "Recursively gathering all compiled kernel modules (.ko files)..."
-          find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "*.ko" -exec cp {} output_release/modules/ \;
-
-          MODULE_COUNT=$(ls -1q output_release/modules/ | wc -l)
-          
-          if [ "$MODULE_COUNT" -eq 0 ]; then
-            echo "There are no .ko files found! Skipping tar creation."
-          else
-            echo "Creating the Debug archive with symbols..."
-            # Move into the folder, get flat filenames, and pipe them directly into tar
-            (cd output_release/modules && find . -name "*.ko" -printf "%P\n" | tar -czvf ../modules-with-symbols.tar.gz -T -)
-              
-            echo "Stripping debug symbols for the optimized archive..."
-            find output_release/modules/ -name "*.ko" -exec llvm-strip --strip-debug {} \;
-              
-            echo "Creating the tiny, optimized archive for normal users..."
-            (cd output_release/modules && find . -name "*.ko" -printf "%P\n" | tar -czvf ../modules-without-symbols.tar.gz -T -)
-          fi
-          
-          echo "Image.gz and *.ko files are ready for upload!"
+        uses: ./.github/actions/prepare-release
 
       # 11. Upload directly to GitHub Releases
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Using a static tag name (Update this manually when you want a new version)
-          tag_name: "${{ inputs.variant_name }}-${{ env.ROOT_TAG }}"
-          name: "Samsung A06 (SM-A065F) ${{ inputs.variant_name }}"
+          tag_name: "${{ inputs.variant-name }}-${{ env.ROOT_TAG }}"
+          name: "Samsung A06 (SM-A065F) ${{ inputs.variant-name }}"
           body: |
-            Automated ${{ inputs.variant_name }} build for the Samsung A06 (SM-A065F).            
+            Automated ${{ inputs.variant-name }} build for the Samsung A06 (SM-A065F).            
             **Included Files:**
             * `Image.gz`: Image file to be packed with boot.img using tool like magiskboot
             * `modules-with-symbols.tar.gz`: Compiled modules with debugging symbols
@@ -171,5 +99,3 @@ jobs:
             output_release/Image.gz
             output_release/modules-with-symbols.tar.gz
             output_release/modules-without-symbols.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
