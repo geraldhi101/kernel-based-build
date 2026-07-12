@@ -49,8 +49,9 @@ jobs:
     with:
       variant-name: "KernelSU-Next"
       setup-url: "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh"
-      project-path: './KernelSU-Next'
       patch-script: |
+        cd KernelSU-Next
+      
         git fetch --unshallow > /dev/null 2>&1 || true
         
         KSUN_TAG=$(git describe --abbrev=0 --tags)
