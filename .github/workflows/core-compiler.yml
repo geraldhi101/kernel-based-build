@@ -19,7 +19,7 @@ on:
 jobs:
   build:
     name: Purge, Fetch, Patch, and Build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       ROOT_TAG: ""
     permissions: 
