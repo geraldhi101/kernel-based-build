@@ -1,14 +1,17 @@
-name: Build Samsung A06 (SM-A06F) - KernelSU
+name: Build Samsung A06 (SM-A065F) - KernelSU
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 */3 * *'
+
+env:
+  ROOT_TAG: ""
 
 jobs:
   watchdog:
     name: Check for KernelSU Updates
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       should-build: ${{ steps.check.outputs.should-build }}
     steps:
@@ -42,17 +45,15 @@ jobs:
           fi
           
   build-execution:
-    name: KernelSU Build 
+    name: KernelSU Build
     needs: watchdog
     if: ${{ needs.watchdog.outputs.should-build == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/core-compiler.yml
     with:
       variant-name: "KernelSU"
       setup-url: "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh"
+      project_path: ./KernelSU
       patch-script: |
-        echo "Change directory to KernelSU directory..."
-        cd KernelSU
-              
         git fetch --unshallow > /dev/null 2>&1 || true
         
         KSU_TAG=$(git describe --abbrev=0 --tags)
@@ -63,7 +64,5 @@ jobs:
         KSU_DYNAMIC_VERSION=$(( (KSU_MAJOR * 10000) + KSU_GIT_COUNT ))
         echo "Calculated Version Code: $KSU_DYNAMIC_VERSION"
         echo "Bypassing sandbox bug by patching dynamic version..."
-        sed -i "s/ccflags-y += -DKSU_VERSION=16/ccflags-y += -DKSU_VERSION=$KSU_DYNAMIC_VERSION/g" kernel/Kbuild
-        
-        cd ..
+        sed -i "s/ccflags-y += -DKSU_VERSION=16/ccflags-y += -DKSU_VERSION=$KSU_DYNAMIC_VERSION/g" kernel/Kbuild        
     secrets: inherit
