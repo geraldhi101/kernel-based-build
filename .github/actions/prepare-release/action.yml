@@ -22,7 +22,6 @@ runs:
           echo "There are no .ko files found! Skipping tar creation."
         else
           echo "Creating the Debug archive with symbols..."
-          # Move into the folder, get flat filenames, and pipe them directly into tar
           (cd output_release/modules && find . -name "*.ko" -printf "%P\n" | tar -czvf ../modules-with-symbols.tar.gz -T -)
             
           echo "Stripping debug symbols for the optimized archive..."
