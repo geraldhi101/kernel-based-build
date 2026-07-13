@@ -3,7 +3,7 @@ description: 'Checks GitHub API for updates and returns true/false'
 
 outputs:
   should-build:
-    description: "Boolean string if a build is needed"
+    description: "Boolean variable if a build is needed"
     value: ${{ steps.check.outputs.result }}
 
 runs:
@@ -14,13 +14,20 @@ runs:
       shell: bash
       run: |
         echo "Fetching latest official KernelSU release..."
-        OFFICIAL_TAG=$(curl -sL https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
+        OFFICIAL_TAG=$(curl -sL https://api.github.com/repos/tiann/KernelSU/releases/latest | 
+                        jq -r '.tag_name')
         
         echo "Constructing expected local tag..."
         MY_EXPECTED_TAG="KernelSU-$OFFICIAL_TAG"
         
         echo "Fetching the latest release from repository..."
-        MY_LATEST_TAG=$(gh release list -R ${{ github.repository }} --limit 100 --json tagName --jq '.[].tagName' | grep -E "^KernelSU-v?[0-9]" | head -n 1)
+        MY_LATEST_TAG=$(gh release list \
+                        -R ${{ github.repository }} \
+                        --limit 100 \
+                        --json tagName \
+                        --jq '.[].tagName' | 
+                        grep -E "^KernelSU-v?[0-9]" | 
+                        head -n 1)
         
         if [ "$MY_LATEST_TAG" == "null" ]; then
           MY_LATEST_TAG="None"
