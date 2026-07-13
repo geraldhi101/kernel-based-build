@@ -29,6 +29,7 @@ jobs:
     with:
       variant-name: "KernelSU-Next"
       setup-url: "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh"
+      work-dir: "./KernelSU-Next"
       patch-script: |
         git fetch --unshallow > /dev/null 2>&1 || true
         
