@@ -12,34 +12,14 @@ jobs:
     outputs:
       should-build: ${{ steps.check.outputs.should-build }}
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+    
       - name: Compare Release Tags
         id: check
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "Fetching latest official KernelSU-Next release..."
-          OFFICIAL_TAG=$(curl -sL https://api.github.com/repos/rifsxd/KernelSU-Next/releases/latest | jq -r '.tag_name')
-          
-          echo "Constructing expected local tag..."
-          MY_EXPECTED_TAG="KernelSU-Next-$OFFICIAL_TAG"
-          
-          echo "Fetching the latest release from your repository..."
-          MY_LATEST_TAG=$(gh release list -R ${{ github.repository }} --limit 100 --json tagName --jq '.[].tagName' | grep -E "^KernelSU-Next-v?[0-9]" | head -n 1)
-          
-          if [ "$MY_LATEST_TAG" == "null" ]; then
-            MY_LATEST_TAG="None"
-          fi
-          
-          echo "Official Latest: $OFFICIAL_TAG"
-          echo "My Latest: $MY_LATEST_TAG"
-          
-          if [ "$MY_EXPECTED_TAG" == "$MY_LATEST_TAG" ]; then
-            echo "Versions match. No new KernelSU-Next update found. Canceling build."
-            echo "should-build=false" >> $GITHUB_OUTPUT
-          else
-            echo "Mismatch detected! A new version is available. Triggering build."
-            echo "should-build=true" >> $GITHUB_OUTPUT
-          fi
+          GITHUB_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/check-update/kernelsu-next
           
   build_execution:
     name: KernelSU-Next Build 
@@ -50,8 +30,6 @@ jobs:
       variant-name: "KernelSU-Next"
       setup-url: "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh"
       patch-script: |
-        cd KernelSU-Next
-      
         git fetch --unshallow > /dev/null 2>&1 || true
         
         KSUN_TAG=$(git describe --abbrev=0 --tags)
