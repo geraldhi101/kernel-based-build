@@ -29,6 +29,7 @@ jobs:
     with:
       variant-name: "KernelSU"
       setup-url: "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh"
+      work-dir: "./KernelSU"
       patch-script: |
         git fetch --unshallow > /dev/null 2>&1 || true
         
