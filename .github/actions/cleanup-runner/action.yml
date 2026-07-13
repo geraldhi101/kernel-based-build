@@ -11,7 +11,14 @@ runs:
         df -h
         
         echo "Purging core heavy package engines quietly (Silencing all warnings)..."
-        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql mysql-server > /dev/null 2>&1
+        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq \
+                                                    azure-cli \
+                                                    google-cloud-cli \
+                                                    microsoft-edge-stable \
+                                                    google-chrome-stable \
+                                                    firefox \
+                                                    postgresql \
+                                                    mysql-server > /dev/null 2>&1
         sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq > /dev/null 2>&1
         sudo apt-get clean -qq > /dev/null 2>&1
         
@@ -26,7 +33,10 @@ runs:
         sudo rm -rf /usr/local/share/powershell # PowerShell modules
         
         echo "Cleaning up residual configuration directories..."
-        sudo rm -rf /etc/mysql /opt/az /etc/apt/sources.list.d/* > /dev/null 2>&1
+        sudo rm -rf \
+            /etc/mysql \
+            /opt/az \
+            /etc/apt/sources.list.d/* > /dev/null 2>&1
         
         echo "Purging background docker cache layers..."
         docker image prune --all --force > /dev/null 2>&1
