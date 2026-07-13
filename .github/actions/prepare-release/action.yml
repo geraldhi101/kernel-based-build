@@ -11,7 +11,8 @@ runs:
         mkdir -p output_release/modules
         
         echo "Copying the exact Image.gz file..."
-        cp out/target/product/a06/obj/KLEAF_OBJ/dist/kernel_device_modules-6.6/mgk_64_k66_kernel_aarch64.user/Image.gz output_release/ || echo "Image.gz not found!"
+        find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "Image.gz" -exec cp {} output_release/ || 
+        echo "Image.gz not found!"
 
         echo "Recursively gathering all compiled kernel modules (.ko files)..."
         find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "*.ko" -exec cp {} output_release/modules/ \;
@@ -22,13 +23,18 @@ runs:
           echo "There are no .ko files found! Skipping tar creation."
         else
           echo "Creating the Debug archive with symbols..."
-          (cd output_release/modules && find . -name "*.ko" -printf "%P\n" | tar -czvf ../modules-with-symbols.tar.gz -T -)
+          (cd output_release/modules && 
+          find . -name "*.ko" -printf "%P\n" | 
+          tar -czvf ../modules-with-symbols.tar.gz -T -)
             
           echo "Stripping debug symbols for the optimized archive..."
-          find output_release/modules/ -name "*.ko" -exec llvm-strip --strip-debug {} \;
+          find output_release/modules/ -name "*.ko" -exec \
+          llvm-strip --strip-debug {} \;
             
           echo "Creating the tiny, optimized archive for normal users..."
-          (cd output_release/modules && find . -name "*.ko" -printf "%P\n" | tar -czvf ../modules-without-symbols.tar.gz -T -)
+          (cd output_release/modules && 
+          find . -name "*.ko" -printf "%P\n" | 
+          tar -czvf ../modules-without-symbols.tar.gz -T -)
         fi
         
         echo "Image.gz and *.ko files are ready for upload!"
