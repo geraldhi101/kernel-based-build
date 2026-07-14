@@ -7,14 +7,6 @@ on:
         description: "Name of the root implementation"
         required: true
         type: string
-      setup-url:
-        description: "URL to fetch setup.sh from every root implementation" 
-        required: true
-        type: string
-      patch-script:
-        description: "Script to build the root implementation"
-        required: true
-        type: string
         
 jobs:
   build:
@@ -40,7 +32,7 @@ jobs:
         
       # 4. Securely pull Kernel.tar.gz and toolchain.tar.gz
       - name: Fetch Samsung A06 (SM-A065F) Kernel Source and Toolchain
-        uses: ./.github/actions/fetch-sm-a065f-sources
+        uses: ./.github/actions/fetch-sources/sm-a065f
 
       # 5. Handle double extraction & drop intermediate archives instantly
       - name: Extract Samsung Kernel and toolchain archives
