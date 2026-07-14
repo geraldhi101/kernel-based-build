@@ -11,15 +11,17 @@ runs:
         df -h
         
         echo "Purging core heavy package engines quietly (Silencing all warnings)..."
-        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq \
-                                                    azure-cli \
-                                                    google-cloud-cli \
-                                                    microsoft-edge-stable \
-                                                    google-chrome-stable \
-                                                    firefox \
-                                                    postgresql \
-                                                    mysql-server > /dev/null 2>&1
-        sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq > /dev/null 2>&1
+        sudo DEBIAN_FRONTEND=noninteractive \
+              apt-get purge -y -qq \
+                azure-cli \
+                google-cloud-cli \
+                microsoft-edge-stable \
+                google-chrome-stable \
+                firefox \
+                postgresql \
+                mysql-server > /dev/null 2>&1
+        sudo DEBIAN_FRONTEND=noninteractive \
+              apt-get autoremove -y -qq > /dev/null 2>&1
         sudo apt-get clean -qq > /dev/null 2>&1
         
         echo "Deleting massive pre-installed software directories (Silent & Fast)..."
