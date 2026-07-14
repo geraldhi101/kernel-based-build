@@ -11,11 +11,13 @@ runs:
         mkdir -p output_release/modules
         
         echo "Copying the exact Image.gz file..."
-        find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "Image.gz" -exec cp {} output_release/ || 
+        find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "Image.gz" -exec \
+        cp {} output_release/ || 
         echo "Image.gz not found!"
 
         echo "Recursively gathering all compiled kernel modules (.ko files)..."
-        find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "*.ko" -exec cp {} output_release/modules/ \;
+        find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "*.ko" -exec \
+        cp {} output_release/modules/ \;
 
         MODULE_COUNT=$(ls -1q output_release/modules/ | wc -l)
         
