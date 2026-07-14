@@ -59,21 +59,11 @@ jobs:
           
       # 8. Automatically patch the kernel tree for root implementation
       - name: Inject Root Implementation
-        run: |
-          echo "Entering the kernel source directory..."
-          cd kernel-6.6
-          
-          echo "Injecting ${{ inputs.variant-name }} setup script..."
-          curl -LSs "${{ inputs.setup-url }}" | bash -
-          
-          echo "Executing variant-specific patches..."
-          ${{ inputs.patch-script }}
+        uses: ./.github/actions/inject-root
           
       # 9. Fire off the original wrapper script provided by Samsung
       - name: Execute Samsung Kernel Build
-        run: |
-          chmod +x build_kernel.sh
-          ./build_kernel.sh
+        uses: ./.github/actions/run-build/samsung
 
       # 10. Gather the final kernel binary and .ko modules files
       - name: Prepare Files for Release
@@ -81,21 +71,4 @@ jobs:
 
       # 11. Upload directly to GitHub Releases
       - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: "${{ inputs.variant-name }}-${{ env.ROOT_TAG }}"
-          name: "Samsung A06 (SM-A065F) ${{ inputs.variant-name }}"
-          body: |
-            Automated ${{ inputs.variant-name }} build for the Samsung A06 (SM-A065F).            
-            **Included Files:**
-            * `Image.gz`: Image file to be packed with boot.img using tool like magiskboot
-            * `modules-with-symbols.tar.gz`: Compiled modules with debugging symbols
-            * `modules-without-symbols.tar.gz`: Compiled modules without debugging symbols
-          draft: false
-          prerelease: false
-          files: |
-            output_release/Image.gz
-            output_release/modules-with-symbols.tar.gz
-            output_release/modules-without-symbols.tar.gz
+        uses: ./.github/actions/publish-release
