@@ -27,7 +27,7 @@ runs:
             tar -xvf toolchain.tar
             rm -f toolchain.tar
           fi
-          cd ..
           
           echo "Verifying local directory structure:"
+          cd ..
           ls -la
