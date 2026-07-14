@@ -4,7 +4,7 @@ description: 'Checks GitHub API for updates and returns true/false'
 outputs:
   should-build:
     description: "Boolean variable if a build is needed"
-    value: ${{ steps.check.outputs.result }}
+    value: ${{ steps.check.outputs.should-build }}
 
 runs:
   using: "composite"
