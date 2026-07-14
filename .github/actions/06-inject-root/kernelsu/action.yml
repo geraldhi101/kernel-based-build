@@ -1,5 +1,6 @@
 name: 'Inject KernelSU'
 description: 'Downloads and patches standard KernelSU'
+
 runs:
   using: "composite"
   steps:
