@@ -1,0 +1,24 @@
+name: 'Inject KernelSU Next'
+description: 'Downloads and patches KernelSU Next'
+runs:
+  using: "composite"
+  steps:
+    - name: Inject KernelSU Next
+      shell: bash
+      working-directory: "KernelSU-Next"
+      run: |
+        echo "Injecting KernelSU Next setup script..."
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+
+        git fetch --unshallow > /dev/null 2>&1 || true
+        
+        KSUN_TAG=$(git describe --abbrev=0 --tags)
+        echo "ROOT_TAG=$KSUN_TAG" >> $GITHUB_ENV
+        KSUN_MAJOR=$(echo "$KSUN_TAG" | sed -E 's/^v([0-9]+).*/\1/')
+        KSUN_GIT_COUNT=$(git rev-list --count HEAD)
+        
+        KSUN_DYNAMIC_VERSION=$(( (KSUN_MAJOR * 10000) + KSUN_GIT_COUNT ))
+        echo "Calculated Version Code: $KSUN_DYNAMIC_VERSION"
+        echo "Bypassing sandbox bug by patching dynamic version..."
+        sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSUN_DYNAMIC_VERSION/g" kernel/Kbuild
+        sed -i "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSUN_TAG/g" kernel/Kbuild
