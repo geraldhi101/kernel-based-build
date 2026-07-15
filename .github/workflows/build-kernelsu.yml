@@ -25,7 +25,7 @@ jobs:
     name: KernelSU Build
     needs: watchdog
     if: ${{ needs.watchdog.outputs.should-build == 'true' || github.event_name == 'workflow_dispatch' }}
+    secrets: inherit
     uses: ./.github/workflows/core-compiler.yml
     with:
       variant-name: "KernelSU"
-    secrets: inherit
