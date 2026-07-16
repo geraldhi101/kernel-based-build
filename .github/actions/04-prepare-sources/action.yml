@@ -22,12 +22,10 @@ runs:
         tar -xzvf toolchain.tar.gz -C temp_toolchain
         rm -f toolchain.tar.gz
         
-        cd temp_toolchain
-        if [ -f toolchain.tar ]; then
-          tar -xvf toolchain.tar
-          rm -f toolchain.tar
+        if [ -f temp_toolchain/toolchain.tar ]; then
+          tar -xvf temp_toolchain/toolchain.tar -C temp_toolchain
+          rm -f temp_toolchain/toolchain.tar
         fi
         
         echo "Verifying local directory structure:"
-        cd ..
         ls -la
