@@ -15,32 +15,34 @@ runs:
         cp {} output_release/ || 
         echo "Image.gz not found!"
 
-        echo "Recursively gathering all compiled kernel modules (.ko files)..."
-        find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "*.ko" -exec \
-        cp {} output_release/modules/ \;
+        # echo "Recursively gathering all compiled kernel modules (.ko files)..."
+        # find out/target/product/a06/obj/KLEAF_OBJ/dist/ -name "*.ko" -exec \
+        # cp {} output_release/modules/ \;
 
-        MODULE_COUNT=$(ls -1q output_release/modules/ | wc -l)
+        # MODULE_COUNT=$(ls -1q output_release/modules/ | wc -l)
         
-        if [ "$MODULE_COUNT" -eq 0 ]; then
-          echo "There are no .ko files found! Skipping tar creation."
-        else
-          echo "Creating the Debug archive with symbols..."
-          (\
-          cd output_release/modules && 
-          find . -name "*.ko" -printf "%P\n" | 
-          tar -czvf ../modules-with-symbols.tar.gz -T - \
-          )
+        # if [ "$MODULE_COUNT" -eq 0 ]; then
+        #   echo "There are no .ko files found! Skipping tar creation."
+        # else
+        #   echo "Creating the Debug archive with symbols..."
+        #   (
+        #     cd output_release/modules && 
+        #     find . -name "*.ko" -printf "%P\n" | 
+        #       tar -czvf ../modules-with-symbols.tar.gz -T -
+        #   )
             
-          echo "Stripping debug symbols for the optimized archive..."
-          find output_release/modules/ -name "*.ko" -exec \
-          llvm-strip --strip-debug {} \;
+        #   echo "Stripping debug symbols for the optimized archive..."
+        #   find output_release/modules/ -name "*.ko" -exec \
+        #   llvm-strip --strip-debug {} \;
             
-          echo "Creating the tiny, optimized archive for normal users..."
-          (\
-          cd output_release/modules && 
-          find . -name "*.ko" -printf "%P\n" | 
-          tar -czvf ../modules-without-symbols.tar.gz -T - \
-          )
-        fi
+        #   echo "Creating the tiny, optimized archive for normal users..."
+        #   (
+        #     cd output_release/modules && 
+        #     find . -name "*.ko" -printf "%P\n" | 
+        #       tar -czvf ../modules-without-symbols.tar.gz -T -
+        #   )
+        # fi
+
+        echo "Image.gz ready to upload for release"
+        # echo "Image.gz and *.ko files are ready for upload!"
         
-        echo "Image.gz and *.ko files are ready for upload!"
