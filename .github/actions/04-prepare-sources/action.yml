@@ -1,5 +1,5 @@
-name: 'Extracting Kernel and Toolchain sources'
-description: 'Extracting sources after fetching those.'
+name: 'Preparing Kernel and Toolchain sources'
+description: 'Conditionally extracts sources only if they were downloaded as archives.'
 
 runs:
   using: "composite"
@@ -7,25 +7,42 @@ runs:
     - name: Extract Samsung Kernel and toolchain archives
       shell: bash
       run: |
-        echo "Extracting Kernel.tar.gz directly to working directories..."
-        tar -xzvf Kernel.tar.gz
-        rm -f Kernel.tar.gz
+        echo "=== Checking for Kernel Archives ==="
         
-        if [ -f Kernel.tar ]; then
-          echo "Unpacking nested Kernel.tar..."
+        if [ -f "Kernel.tar.gz" ]; then
+          echo "Kernel.tar.gz found. Extracting..."
+          tar -xzvf Kernel.tar.gz
+          rm -f Kernel.tar.gz
+        fi
+        
+        if [ -f "Kernel.tar" ]; then
+          echo "Kernel.tar found. Unpacking..."
           tar -xvf Kernel.tar
           rm -f Kernel.tar
         fi
 
-        echo "Extracting toolchain.tar.gz..."
-        mkdir temp_toolchain
-        tar -xzvf toolchain.tar.gz -C temp_toolchain
-        rm -f toolchain.tar.gz
+        if [ ! -f "Kernel.tar.gz" ] && [ ! -f "Kernel.tar" ]; then
+          echo "No Kernel archives found. Assuming source is already uncompressed (e.g., from git clone)."
+        fi
+
+        echo "=== Checking for Toolchain Archives ==="
         
-        if [ -f temp_toolchain/toolchain.tar ]; then
+        if [ -f "toolchain.tar.gz" ]; then
+          echo "toolchain.tar.gz found. Extracting..."
+          mkdir -p temp_toolchain
+          tar -xzvf toolchain.tar.gz -C temp_toolchain
+          rm -f toolchain.tar.gz
+        fi
+        
+        if [ -f "temp_toolchain/toolchain.tar" ]; then
+          echo "Nested toolchain.tar found. Unpacking..."
           tar -xvf temp_toolchain/toolchain.tar -C temp_toolchain
           rm -f temp_toolchain/toolchain.tar
         fi
+
+        if [ ! -f "toolchain.tar.gz" ] && [ ! -d "temp_toolchain" ]; then
+          echo "No toolchain archives found. Assuming toolchain is already uncompressed."
+        fi
         
-        echo "Verifying local directory structure:"
+        echo "=== Verifying Working Directory ==="
         ls -la
