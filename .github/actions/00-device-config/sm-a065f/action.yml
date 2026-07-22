@@ -7,7 +7,7 @@ outputs:
     value: 'a06'
   kernel_version:
     description: 'The firmware string'
-    value: 'A065FXXXS4BYG6'
+    value: 'A065FXXS5BYG6'
 
 runs:
   using: "composite"
