@@ -1,0 +1,59 @@
+name: 'Inject Root Implementation'
+description: 'Dynamically detects the kernel directory and injects root.'
+
+inputs:
+  root-method:
+    description: 'Which root method to inject (kernelsu, kernelsu-next, none)'
+    required: true
+    default: 'kernelsu'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve Dynamic Directory
+      shell: bash
+      run: |
+        DETECTED_DIR=$(find . -maxdepth 1 -type d -name "kernel-*" | head -n 1 | sed 's|^\./||')
+        
+        if [ -z "$DETECTED_DIR" ]; then
+          echo "FATAL: Could not find any kernel directory!"
+          exit 1
+        fi
+        
+        echo "Found directory: $DETECTED_DIR"
+        echo "MATCHED_PATH=$DETECTED_DIR" >> $GITHUB_ENV
+
+    - name: Inject KernelSU
+      if: inputs.root-method == 'kernelsu'
+      working-directory: ${{ env.MATCHED_PATH }}
+      shell: bash
+      run: |
+        echo "Injecting KernelSU setup script..."
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+
+    - name: Patch KernelSU
+      if: inputs.root-method == 'kernelsu'
+      working-directory: ${{ env.MATCHED_PATH }}/KernelSU
+      shell: bash
+      run: |
+        git fetch --unshallow > /dev/null 2>&1 || true
+        KSU_TAG=$(git describe --abbrev=0 --tags)
+        KSU_MAJOR=$(echo "$KSU_TAG" | sed -E 's/^v([0-9]+).*/\1/')
+        KSU_GIT_COUNT=$(git rev-list --count HEAD)
+        KSU_DYNAMIC_VERSION=$(( (KSU_MAJOR * 10000) + KSU_GIT_COUNT ))
+        sed -i "s/ccflags-y += -DKSU_VERSION=16/ccflags-y += -DKSU_VERSION=$KSU_DYNAMIC_VERSION/g" kernel/Kbuild
+
+    - name: Inject KernelSU-Next
+      if: inputs.root-method == 'kernelsu-next'
+      working-directory: ${{ env.MATCHED_PATH }}
+      shell: bash
+      run: |
+        echo "Injecting KernelSU-Next setup script..."
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+
+    - name: Patch KernelSU-Next
+      if: inputs.root-method == 'kernelsu-next'
+      working-directory: ${{ env.MATCHED_PATH }}/KernelSU-Next
+      shell: bash
+      run: |
+        echo "Put KSU-Next patching logic here..."
