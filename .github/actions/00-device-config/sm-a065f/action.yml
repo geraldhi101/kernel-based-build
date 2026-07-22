@@ -1,0 +1,17 @@
+name: 'Device Configuration (SM-A065F)'
+description: 'Stores static variables and firmware strings for the device.'
+
+outputs:
+  device_codename:
+    description: 'Device codename'
+    value: 'a06'
+  kernel_version:
+    description: 'The firmware string'
+    value: 'A065FXXXS4BYG6'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Load Config
+      shell: bash
+      run: echo "Loaded hardware configuration for Samsung A06"
