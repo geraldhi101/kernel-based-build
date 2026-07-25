@@ -22,7 +22,7 @@ runs:
       run: |
         RAW_INPUT='${{ inputs.root-methods }}'
         
-        METHODS=$(echo "$RAW_INPUT" | jq -r '.root_method[] 2>/dev/null || echo "kernelsu"')
+        METHODS=$(echo "$RAW_INPUT" | jq -r '.root_method[]' 2>/dev/null)
 
         SHOULD_BUILD=false
 
