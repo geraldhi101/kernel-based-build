@@ -60,6 +60,7 @@ jobs:
 
   watchdog:
     name: Check for Updates
+    needs: setup-build
     runs-on: ubuntu-latest
     permissions: read-all
     outputs:
@@ -73,6 +74,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         uses: ./.github/actions/00-check-update
+        with:
+          root-methods: ${{ needs.setup-build.outputs.matrix }}
           
   build:
     name: Build (${{ matrix.root_method }})
