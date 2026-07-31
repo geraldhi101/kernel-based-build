@@ -26,7 +26,7 @@ on:
 jobs:
   setup-build:
     name: Prepare Configuration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       device_codename: ${{ steps.config.outputs.device_codename }}
